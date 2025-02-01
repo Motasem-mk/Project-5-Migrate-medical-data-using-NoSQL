@@ -1,212 +1,144 @@
-# **Healthcare Data Migration to MongoDB**
+# MongoDB Data Migration Project
 
-A simple Docker-based solution to migrate CSV healthcare data to MongoDB with validation and CRUD operations.
+This project demonstrates how to set up a MongoDB service with data migration using Docker Compose. The project involves integrating MongoDB, running data migration scripts, and performing basic CRUD operations.
 
----
+## Project Structure
 
-##  **Quick Start**
-
-### **Prerequisites**
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
-### **Run in 3 Steps**
-```bash
-# 1. Clone and enter the project
-git clone https://github.com/Motasem-mk/project5-MongoDB.git
-cd project5-MongoDB
-
-# 2. Set up credentials (edit with your values)
-cp .env.example .env
-
-# 3. Start the pipeline
-docker-compose up
 ```
-
----
-
-## **Project Structure**
-```
-├── Dockerfile               # Python environment setup
-├── docker-compose.yml       # MongoDB + migration service
-├── healthcare_dataset.csv   # Sample dataset
-├── mongodbproject.py        # Migration/CRUD logic
+.
+├── mongodbproject.py        # Python script for data migration and CRUD operations
+├── Dockerfile               # Dockerfile for building the migration container
+├── docker-compose.yml       # Docker Compose configuration
 ├── requirements.txt         # Python dependencies
-├── .env.example             # Credentials template
-├── .gitignore               # Files to ignore in the repository
-└── README.md                # This documentation
+├── healthcare_data.csv      # Sample data to be migrated
+├── README.md                # Project documentation
+├── .env                     # Environment variables (excluded from GitHub)
+├── .env.example             # Example environment file
+└── .gitignore               # Ignored files and folders
 ```
 
 ---
 
-## **Environment Variables**
+## Docker Compose Configuration
 
-- Configure MongoDB credentials in the `.env` file:
-```
-MONGO_INITDB_ROOT_USERNAME=your_username
-MONGO_INITDB_ROOT_PASSWORD=your_password
-```
+### `docker-compose.yml`
+The services are configured in `docker-compose.yml` using Docker's **default network**. Here’s a breakdown of the services:
 
-- Example `.env.example` file:
-```
-MONGO_INITDB_ROOT_USERNAME=your_username
-MONGO_INITDB_ROOT_PASSWORD=your_password
-```
-
----
-
-## **Steps to Verify Data**
-
-1. Connect to MongoDB using **MongoDB Compass**:
-   ```
-   mongodb://your_username:your_password@localhost:27017/
-   ```
-
-2. Check the `healthcare` database and the `patients` collection to confirm the data migration.
-
----
-
-## **Docker Configuration**
-
-### **docker-compose.yml**
+### **1. MongoDB Service**
 ```yaml
-version: '3.9'
-
 services:
   mongodb:
-    image: mongo:latest
-    container_name: mongodb
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
+```
+- **Environment Variables:** MongoDB root credentials are passed through environment variables.
+- **Ports:** The database is accessible on port `27017`.
+- **Network:** Docker's default network is used for communication between services.
+
+---
+
+### **2. MongoDB Migration Service**
+```yaml
+services:
+  mongodb-migration:
+    build:
+      context: .
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-
-  migration:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mongodb-migration
     depends_on:
       - mongodb
     volumes:
-      - ./healthcare_dataset.csv:/app/healthcare_dataset.csv
-
-volumes:
-  mongodb_data:
+      - .:/app
+    command: python mongodbproject.py
 ```
+- **Build:** The migration service is built from the local context (`.`).
+- **Volumes:** 
+  - The project directory (`.`) is mounted to `/app` in the container to allow access to local files.
+- **Role:** The migration service performs operations as a **root** user inside the container.
+- **Command:** Executes the Python script (`mongodbproject.py`).
 
 ---
 
-### **Dockerfile**
-```dockerfile
-FROM python:3.9-slim
+## Prerequisites
 
-WORKDIR /app
-
-COPY . /app
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-EXPOSE 27017
-
-CMD ["python", "mongodbproject.py"]
-```
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop) and ensure it is running.
+2. Clone the repository to your local machine:
+   ```sh
+   git clone <repository-url>
+   ```
+3. Navigate to the project directory:
+   ```sh
+   cd <project-directory>
+   ```
 
 ---
 
-## **Data Migration Process**
+## Setup Instructions
 
-1. **Loading the Data**:
-   - The script reads the CSV file (`healthcare_dataset.csv`) using `pandas`.
+1. Create a `.env` file by copying `.env.example`:
+   ```sh
+   cp .env.example .env
+   ```
+   Update the `.env` file with your MongoDB root username and password.
 
-2. **Data Cleaning**:
-   - Removes duplicates and invalid records.
-   - Converts date columns to datetime format.
-   - Normalizes text fields (e.g., names).
+2. Build and start the services:
+   ```sh
+   docker-compose up --build
+   ```
 
-3. **Data Insertion**:
-   - The cleaned data is inserted into the `patients` collection in the `healthcare` database.
-   - Post-migration checks validate the data integrity.
-
----
-
-## **Volumes**
-
-1. **mongodb_data**:
-   - Persistently stores MongoDB data between container restarts.
-
-2. **CSV Volume**:
-   - Mounts the `healthcare_dataset.csv` file inside the container at `/app/healthcare_dataset.csv`.
+3. Verify the setup:
+   - MongoDB should be running on port `27017`.
+   - The migration service will load the CSV data, perform migrations, and execute CRUD operations.
 
 ---
 
-## **CRUD Operations**
+## Migration Process and CRUD Operations
 
-### **Create**
-```python
-new_record = {
-    "Name": "Alice Brown",
-    "Age": 25,
-    "Medical Condition": "Asthma",
-    "Date of Admission": "2024-03-01",
-    "Discharge Date": "2024-03-05"
-}
-collection.insert_one(new_record)
-```
+The migration script (`mongodbproject.py`) follows these steps:
 
-### **Read**
-```python
-results = collection.find({"Age": {"$gte": 88}})
-```
+1. **Data Migration**  
+   - The script reads data from `healthcare_data.csv`.
+   - Duplicate entries are removed, date formats are normalized, and the cleaned data is inserted into MongoDB.
 
-### **Update**
-```python
-collection.update_many({"Name": "Alice Brown"}, {"$set": {"Room Number": 203}})
-```
-
-### **Delete**
-```python
-collection.delete_many({"Name": "Alice Brown"})
-```
+2. **CRUD Operations**
+   - Insert a sample record into the `patients` collection.
+   - Query and display a sample record.
+   - Update an existing record.
+   - Delete a record and confirm the deletion.
 
 ---
 
-## **Dependencies**
-Listed in `requirements.txt`:
-```
-pandas
-pymongo
-```
-Install them using:
-```bash
-pip install -r requirements.txt
-```
+## Verifying the Data in MongoDB
+
+You can connect to MongoDB using [MongoDB Compass](https://www.mongodb.com/products/compass) or any MongoDB client with the following details:
+- **Host:** `localhost`
+- **Port:** `27017`
+- **Username:** Your MongoDB root username (from `.env`)
+- **Password:** Your MongoDB root password (from `.env`)
 
 ---
 
-## **Project Limitations**
-- This project focuses on data migration and basic CRUD operations.
-- No additional indexes were created apart from the default `_id` index.
-- Future improvements could include performance optimizations, such as indexing frequently queried fields. 
+## Customization
+
+Feel free to modify the following files based on your project requirements:
+- `mongodbproject.py` for data transformation logic.
+- `docker-compose.yml` for service configuration.
+- `requirements.txt` to add or remove Python dependencies.
 
 ---
 
-## **Troubleshooting**
+## Contributing
 
-### **1. MongoDB Connection Issues**
-   Ensure that:
-   - Docker containers are running.
-   - MongoDB is exposed on port `27017`.
-
-### **2. Data Issues**
-   If data migration fails, ensure the CSV file:
-   - Has no missing or invalid fields.
-   - Contains valid date formats.
+Contributions are welcome! Fork the repository, make your changes, and create a pull request.
 
 ---
 
-## **Contributors**
-- Motasem Abualqumboz – Data Engineer Intern at DataSoluTech
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
