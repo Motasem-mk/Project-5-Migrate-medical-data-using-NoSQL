@@ -65,6 +65,68 @@ if healthcare_dict:
         logging.error(f"Data insertion failed: {e}")
         exit(1)
 
+# Post migration data integrity checks
+logging.info("Starting post-migration data integrity checks...")
+
+# 1. Record Count Verification**
+csv_count = healthcare.shape[0]  # Count from the original DataFrame
+inserted_count = collection.count_documents({})
+if inserted_count == csv_count:
+    logging.info(f"Record count check passed: {inserted_count} records inserted.")
+else:
+    logging.warning(f"Record count mismatch! Expected {csv_count}, found {inserted_count}.")
+
+# 2. Check for Duplicate Records**
+logging.info("Checking for duplicate records in MongoDB based on all fields...")
+pipeline = [
+    {"$group": {
+        "_id": {
+            "Name": "$Name",
+            "Age": "$Age",
+            "Gender": "$Gender",
+            "Blood Type": "$Blood Type",
+            "Medical Condition": "$Medical Condition",
+            "Date of Admission": "$Date of Admission",
+            "Discharge Date": "$Discharge Date",
+            "Doctor": "$Doctor",
+            "Hospital": "$Hospital",
+            "Insurance Provider": "$Insurance Provider",
+            "Billing Amount": "$Billing Amount",
+            "Room Number": "$Room Number",
+            "Admission Type": "$Admission Type",
+            "Medication": "$Medication",
+            "Test Results": "$Test Results"
+        },
+        "count": {"$sum": 1}
+    }},
+    {"$match": {"count": {"$gt": 1}}}
+]
+
+duplicates = list(collection.aggregate(pipeline))
+if duplicates:
+    logging.warning(f"Found {len(duplicates)} duplicate records in MongoDB.")
+else:
+    logging.info("No duplicate records found.")
+
+# 3. Validate Data Consistency**
+logging.info("Validating date fields...")
+invalid_count = collection.count_documents({"$expr": {"$gt": ["$Date of Admission", "$Discharge Date"]}})
+
+if invalid_count == 0:
+    logging.info("All date entries are valid.")
+else:
+    logging.warning(f"Found {invalid_count} invalid date entries in MongoDB.")
+
+# 4. Sample Data Validation**
+logging.info("Sampling a record for validation...")
+sample_record = collection.find_one({"Name": "Bobby Jackson"})
+if sample_record:
+    logging.info(f"Sample record found: {sample_record}")
+else:
+    logging.warning("Sample record not found.")
+
+logging.info("Post-migration data integrity checks completed.")
+
 # CRUD Operations
 logging.info("Starting CRUD operation examples...")
 
