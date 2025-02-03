@@ -2,21 +2,25 @@ version: "3.8"
 
 services:
   mongodb:
-    image: mongo:6.0
+    image: mongo:6.0  # MongoDB version 6.0
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}  # Set via .env
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}  # Set via .env
     ports:
-      - "27017:27017"
+      - "27017:27017"  # Maps port 27017 to localhost for external access
+    volumes:
+      - mongodb_data:/data/db  # Persist data in a named volume
 
   mongodb-migration:
     build:
-      context: .
+      context: .  # Use the Dockerfile in the current directory
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     depends_on:
-      - mongodb
+      - mongodb  # Ensure MongoDB starts before running this service
     volumes:
-      - .:/app
-    command: python mongodbproject.py
+      - .:/app  # Mount the project directory to /app inside the container
+
+volumes:
+  mongodb_data:  # Defines a named volume for MongoDB data persistence
