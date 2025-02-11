@@ -3,6 +3,7 @@ version: "3.8"
 services:
   mongodb:
     image: mongo:6.0  # MongoDB version 6.0
+    container_name: mongodb_container
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}  # Set via .env
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}  # Set via .env
@@ -14,13 +15,16 @@ services:
   mongodb-migration:
     build:
       context: .  # Use the Dockerfile in the current directory
+    container_name: migration_container
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     depends_on:
       - mongodb  # Ensure MongoDB starts before running this service
     volumes:
-      - .:/app  # Mount the project directory to /app inside the container
+      - csv_data:/app/data  # Mount the CSV volume inside the container
+    
 
 volumes:
   mongodb_data:  # Defines a named volume for MongoDB data persistence
+  csv_data:        # Volume for the CSV data
