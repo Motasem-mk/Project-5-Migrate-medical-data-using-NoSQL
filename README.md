@@ -5,16 +5,17 @@ This project demonstrates how to set up a MongoDB service with data migration us
 ## Project Structure
 
 ```
-.
-├── mongodbproject.py        # Python script for data migration and CRUD operations
-├── Dockerfile               # Dockerfile for building the migration container
-├── docker-compose.yml       # Docker Compose configuration
-├── requirements.txt         # Python dependencies
-├── healthcare_data.csv      # Sample data to be migrated
-├── README.md                # Project documentation
-├── .env                     # Environment variables (excluded from GitHub)
-├── .env.example             # Example environment file
-└── .gitignore               # Ignored files and folders
+├── data/
+│   └── healthcare_dataset.csv  # CSV file moved to the 'data' folder
+├── mongodbproject.py           # Python script for migration and CRUD operations
+├── Dockerfile                  # Dockerfile to build the migration container
+├── docker-compose.yml          # Docker Compose configuration
+├── requirements.txt            # Python dependencies file
+├── README.md                   # Project documentation
+├── .env.example                # Template for environment variables (shared in repo)
+├── .env                        # Actual environment variables (excluded from repo)
+└── .gitignore                  # Specifies files and folders to ignore in version control
+
 ```
 
 ---
