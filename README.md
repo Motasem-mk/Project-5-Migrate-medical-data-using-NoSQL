@@ -27,14 +27,18 @@ The services are configured in `docker-compose.yml` using Docker's **default net
 
 ### **1. MongoDB Service**
 ```yaml
+version: "3.8"
+
 services:
   mongodb:
-    image: mongo:6.0
+    image: mongo:6.0  # MongoDB version 6.0
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}  # Set via .env
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}  # Set via .env
     ports:
-      - "27017:27017"
+      - "27017:27017"  # Maps port 27017 to localhost for external access
+    volumes:
+      - mongodb_data:/data/db  # Persist data in a named volume
 ```
 - **Environment Variables:** MongoDB root credentials are passed through environment variables.
 - **Ports:** The database is accessible on port `27017`.
@@ -54,7 +58,7 @@ services:
     depends_on:
       - mongodb
     volumes:
-      - .:/app
+      - csv_data:/app/data  # Mount the CSV volume inside the container
     command: python mongodbproject.py
 ```
 - **Build:** The migration service is built from the local context (`.`).
@@ -96,6 +100,7 @@ services:
    - MongoDB should be running on port `27017`.
    - The migration service will load the CSV data, perform migrations, and execute CRUD operations.
 
+
 ---
 
 ## Migration Process and CRUD Operations
@@ -122,6 +127,49 @@ You can connect to MongoDB using [MongoDB Compass](https://www.mongodb.com/produ
 - **Username:** Your MongoDB root username (from `.env`)
 - **Password:** Your MongoDB root password (from `.env`)
 
+---
+
+## Creating the `data_engineer` User in MongoDB
+
+After the MongoDB container is running, you need to create a dedicated user for managing the `healthcare` database.
+
+### **1. Connect to MongoDB as an Admin**
+Run the following command to enter the MongoDB shell:
+```sh
+docker exec -it mongo1-mongodb-1 mongosh -u admin -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin
+```
+
+### **2. Switch to the `healthcare` Database**
+Inside the MongoDB shell, run:
+```javascript
+use healthcare
+```
+
+### **3. Create the `data_engineer` User**
+Run the following command to create the user:
+```javascript
+db.createUser({
+  user: "data_engineer",
+  pwd: "securepassword123",
+  roles: [
+    { role: "readWrite", db: "healthcare" },
+    { role: "dbAdmin", db: "healthcare" }
+  ]
+})
+```
+
+### **4. Verify the User Creation**
+Run:
+```javascript
+show users
+```
+You should see `data_engineer` listed with the assigned roles.
+
+### **5. Connect as `data_engineer`**
+Now, exit the MongoDB shell and reconnect using the new user:
+```sh
+docker exec -it mongo1-mongodb-1 mongosh -u data_engineer -p securepassword123 --authenticationDatabase healthcare
+```
 ---
 
 ## Customization
